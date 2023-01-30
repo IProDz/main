@@ -1,0 +1,78 @@
+-- This script will call a taxi when the player types "/taxi"
+-- and takes them to the location specified on the GPS
+
+local taxiLocations = {
+  {x = -667.44, y = -937.75, z = 22.51},
+  {x = 874.24, y = -3094.71, z = 5.62},
+  {x = 2740.49, y = 1461.34, z = 24.71},
+  -- Add more locations as needed
+}
+
+-- Check if the player has a GPS
+function hasGPS(player)
+  local inventory = ESX.GetPlayerData(player).inventory
+  for i=1, #inventory, 1 do
+    if inventory[i].name == "gps" then
+      return true
+    end
+  end
+  return false
+end
+
+-- Get the GPS location
+function getGPSLocation(player)
+  local inventory = ESX.GetPlayerData(player).inventory
+  for i=1, #inventory, 1 do
+    if inventory[i].name == "gps" then
+      return inventory[i].label
+    end
+  end
+  return nil
+end
+
+-- Get the closest taxi location
+function getClosestTaxiLocation(player)
+  local playerCoords = GetEntityCoords(player)
+  local closestLocation = nil
+  local closestDistance = nil
+
+  for i=1, #taxiLocations, 1 do
+    local distance = GetDistanceBetweenCoords(playerCoords, taxiLocations[i].x, taxiLocations[i].y, taxiLocations[i].z, true)
+    if closestDistance == nil or distance < closestDistance then
+      closestDistance = distance
+      closestLocation = taxiLocations[i]
+    end
+  end
+
+  return closestLocation
+end
+
+-- Call a taxi
+function callTaxi(player)
+  if hasGPS(player) then
+    local gpsLocation = getGPSLocation(player)
+    local closestTaxiLocation = getClosestTaxiLocation(player)
+
+    -- Check if the GPS location is a valid taxi location
+    for i=1, #taxiLocations, 1 do
+      if gpsLocation == taxiLocations[i].name then
+        -- Spawn a taxi and drive to the destination
+        local taxi = CreateVehicle(VehicleHash("taxi"), closestTaxiLocation.x, closestTaxiLocation.y, closestTaxiLocation.z, 0.0, true, false)
+        TaskVehicleDriveToCoord(taxi, player, taxiLocations[i].x, taxiLocations[i].y, taxiLocations[i].z, 20.0, 0, VehicleHash("taxi"), 486603, 1.0, true)
+
+        return
+      end
+    end
+
+    -- GPS location is not a valid taxi location
+    TriggerEvent("chatMessage", "", {255, 0, 0}, "Invalid GPS location.")
+  else
+    -- Player does not have a GPS
+    TriggerEvent("chatMessage", "", {255, 0, 0}, "You do not have a GPS.")
+  end
+end
+
+-- Register the command
+RegisterCommand("taxi", function(source, args, rawCommand)
+  callTaxi(source)
+end, false)
